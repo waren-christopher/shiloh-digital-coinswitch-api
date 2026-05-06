@@ -253,8 +253,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     </span>
 
                     <select id="accountSelect" class="account-dropdown">
-                        <option value="311536374533912">warenx tmb</option>
-                        <option value="136628600000031">warenx yes bank</option>
+                        <option value="136628600000041">Shiloh Yes bank</option>
+                        <option value="120039711894">Shloh canara bank</option>
                     </select>
 
                     <input type="hidden" name="accountNumber" id="hiddenAccountNumber" value="311536374533912" />

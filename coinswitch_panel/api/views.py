@@ -146,7 +146,7 @@ def login_view(request):
 
         # 🔥 Replace this with psycopg2 query
         if username == "admin" and password == "1234":
-            request.session['user'] = username   # ✅ create session
+            request.session['user'] = username  
             return redirect('dashboard')
         else:
             return render(request, "login.html", {"error": "Invalid credentials"})
@@ -293,7 +293,6 @@ def auto_trade_bot(price_range, min_qty, body):
     while bot_running:
         loop_start_time = datetime.now()
         try:
-            # We skip printing orderbook fetch every 3 seconds to avoid terminal spam, but we track status.
             res = session.get("https://exchange.coinswitch.co/api/v2/public/depth/?instrument=usdt/inr")
             
             if res.status_code != 200:
@@ -303,17 +302,15 @@ def auto_trade_bot(price_range, min_qty, body):
             data = res.json()
             levels = data["data"][side]
 
-            # 1. Find the top COMPETITOR price (ignoring our own order)
             competitor_price = None
             for level in levels:
                 price = float(level[0])
                 qty = float(level[1])
 
-                # CRITICAL: Do not compete with our own active order
+
                 if current_placed_price is not None and price == current_placed_price:
                     continue
 
-                # Ensure competitor has enough volume to matter
                 if qty >= min_qty:
                     competitor_price = price
                     break 
@@ -332,11 +329,9 @@ def auto_trade_bot(price_range, min_qty, body):
             if target_price == "price range reached":
                 time.sleep(5)
                 continue
-            # 2. Determine our target price (+0.01 for buy, -0.01 for sell)
 
             print(f"Competitor: {competitor_price} | Our Target: {target_price} | Currently Placed at: {current_placed_price}")
 
-            # 3. State Machine: Place, Hold, or Cancel/Replace
             if current_order_id is None:
                 # PLACE NEW ORDER
                 body['limitPrice'] = str(target_price)
@@ -347,7 +342,6 @@ def auto_trade_bot(price_range, min_qty, body):
                 response = coinswitch.buy_limit_order(body) if side == 'buy' else coinswitch.sell_limit_order(body)
                 resp_data = response.json()
                 
-                # Check for success (Adjust the condition based on CoinSwitch API's exact success response)
                 if balance == 0:
                     def fetch_balance(body):
                         global balance
@@ -408,7 +402,7 @@ def auto_trade_bot(price_range, min_qty, body):
                         return
                 
 
-                # CHECK IF WE ARE STILL AT THE TOP
+
             if current_placed_price != target_price:
                 bot_message = f"Market moved. Re-adjusting order to ₹{target_price}..."
                 print(f"📉 Market moved! We are at {current_placed_price}, new target is {target_price}. Replacing order...")
@@ -474,14 +468,12 @@ def dashboard(request):
     if request.method == "POST":
         api_action = request.POST.get('api')
         
-        # Clean standard django/frontend keys from the payload
+
         body = {k: v for k, v in request.POST.items() if k not in ('api', 'csrfmiddlewaretoken')}
         
         try:
-            # Dynamically call the matching function in coinswitch.py
             api_function = getattr(coinswitch, api_action)
             
-            # Execute the function with the cleaned body payload
             response = api_function(body)
             try:
                 data = response.json()
