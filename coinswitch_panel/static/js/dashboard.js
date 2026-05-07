@@ -21,8 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
         crypto_withdrawal: {
             amount: "",
             assetName: "USDT",
-            chain: "BSC",
-            address: "ledger address",
+            chain: "TRC",
+            address: "binance address",
             subaddress: ""
         },
 
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
             instrument: "USDT/INR",
             quantityType: "QUOTE",
             bestQuantityType: "QUOTE",
-            username: "warenx1"
+            username: "shilohdigital_otc"
         },
 
         buy_limit_order: {
@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
             side: "BUY",
             instrument: "USDT/INR",
             quantityType: "QUOTE",
-            username: "warenx1"
+            username: "shilohdigital_otc"
         },
 
         sell_limit_order: {
@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
             side: "SELL",
             instrument: "USDT/INR",
             quantityType: "QUOTE",
-            username: "warenx1"
+            username: "shilohdigital_otc"
         },
 
         cancel_order: { orderId: "" }
@@ -142,7 +142,13 @@ document.addEventListener("DOMContentLoaded", () => {
             orders.forEach(o => {
                 let d = new Date(parseInt(o.createdAt || 0) * 1000).toLocaleString();
                 html += `<tr>
-                    <td>${o.orderId}</td><td>${o.instrument}</td>
+                    <td style="white-space: nowrap;">
+                        ${o.orderId}
+                        <button class="copy-icon-btn" onclick="window.copyText('${o.orderId}')" title="Copy Order ID" style="background: transparent; border: none; cursor: pointer; margin-left: 8px; color: #3b82f6; transition: color 0.2s;">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </td>
+                    <td>${o.instrument}</td>
                     <td class="${o.side==='BUY'?'text-buy':'text-sell'}">${o.side}</td>
                     <td>${o.status}</td><td>${o.limitPrice}</td><td>${o.quantity}</td>
                     <td>${o.filledQuantity}</td><td>${o.filledQuoteQuantity}</td>

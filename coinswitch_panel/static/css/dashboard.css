@@ -462,4 +462,14 @@ button[data-api="cancel_all_order"] {
 }
 
 
+/* Fix for the white-on-white dropdown issue */
+select.account-dropdown option {
+    background-color: #1e293b; /* A nice dark slate color */
+    color: #ffffff;            /* Keep the text white */
+}
 
+/* Optional: Ensure the main select box itself also stays dark */
+select.account-dropdown {
+    background-color: #0f172a; 
+    color: #ffffff;
+}
