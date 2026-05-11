@@ -72,3 +72,5 @@
 
 2026-04-26 14:58:14 {"message":"Withdrawal request processed successfully. Request ID: 46538119-516d-4afa-802b-e54f9395f55d"}
 
+2026-05-09 12:15:29 {"message":"Withdrawal configuration not found for master ID: 4e80228f-806b-426c-aaae-a66357a49f0d"}
+
