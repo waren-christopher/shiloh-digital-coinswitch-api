@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
         crypto_withdrawal: {
             amount: "",
             assetName: "USDT",
-            chain: "TRC",
+            chain: "TRON",
             address: "binance address",
             subaddress: ""
         },
