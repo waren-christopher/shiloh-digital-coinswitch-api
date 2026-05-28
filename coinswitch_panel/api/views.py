@@ -12,9 +12,8 @@ from django.template.loader import render_to_string
 load_dotenv()
 
 def finish_auto_trade_and_report():
-    #..\venv\Scripts\Activate; cd .\coinswitch_panel; python -u -m waitress --listen=127.0.0.1:8000 coinswitch_panel.wsgi:application
+    global calculated_order_id,trade_quantity
     try:
-        prijfdf
         print("Generating auto trade performance report...")
         # Get recent orders
         resp = coinswitch.recent_orders({})
@@ -22,7 +21,9 @@ def finish_auto_trade_and_report():
         export_file = "coinswitch_trade_history.csv"
         
         # Calculate stats
-        stats = analyze_bot_performance(api_json_response, export_filename=export_file)
+        stats = analyze_bot_performance(api_json_response,start_order_id=calculated_order_id, export_filename=export_file)
+        calculated_order_id = None
+        trade_quantity = ""
         print('sdjfjsfjsf',stats)
         
         # Professional HTML Email Template rendered from separate file
@@ -33,7 +34,7 @@ def finish_auto_trade_and_report():
             subject="CoinSwitch Auto Trade Bot Performance [Summary]",
             body=html_message,
             from_email=settings.EMAIL_HOST_USER,
-            to=["warenchrist00@gmail.com"]
+            to=["michaelsureshm12@gmail.com"]
         )
         email.content_subtype = "html"  # Crucial for HTML rendering
         
@@ -45,7 +46,7 @@ def finish_auto_trade_and_report():
     except Exception as e:
         print(f"Error generating or sending performance report: {str(e)}")
 
-def analyze_bot_performance(api_json_response, export_filename="coinswitch_trade_history.csv"):
+def analyze_bot_performance(api_json_response, start_order_id=None, export_filename="coinswitch_trade_history.csv"):
     orders = []
     response_data = api_json_response.get('data', [])
     if isinstance(response_data, list):
@@ -53,46 +54,36 @@ def analyze_bot_performance(api_json_response, export_filename="coinswitch_trade
     elif isinstance(response_data, dict):
         orders = response_data.get('data', [])
     
-    # Trackers for your Django dashboard
     total_trades = 0
     total_usdt_bought = 0.0
     total_inr_spent = 0.0
     cancelled_trades = 0
-    
-    
-    # 1. Define IST Timezone (UTC + 5 hours 30 mins)
     ist_tz = timezone(timedelta(hours=5, minutes=30))
-    
-    # 2. List to hold the extracted data for our Excel rows
     excel_rows = []
     
     for order in orders:
+        current_id = order.get('orderId')
         status = order.get('status', '').upper()
+        
         if status == 'CANCELLED':
             cancelled_trades += 1
             
-        # Only export fulfilled or partially cancelled orders to CSV
         if status in ['FULFILLED', 'PARTIALLY_CANCELLED']:
             filled_qty = float(order.get('filledQuantity', 0))
             filled_inr = float(order.get('filledQuoteQuantity', 0))
             
-            # Update Dashboard Stats (Only count actual executions)
             if filled_qty > 0:
                 total_trades += 1
                 total_usdt_bought += filled_qty
                 total_inr_spent += filled_inr
                 
-            # 3. Convert Unix Timestamp to readable IST Date & Time
             try:
                 ts = int(order.get('createdAt', 0))
-                # Tell Python this is UTC, then convert it to IST
                 dt_ist = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(ist_tz)
-                # Format nicely (e.g., "2026-04-02 12:35:10 PM")
                 formatted_time = dt_ist.strftime('%Y-%m-%d %I:%M:%S %p')
             except (ValueError, TypeError):
                 formatted_time = "Unknown"
 
-            # 4. Extract exactly the data points you requested for Excel
             excel_rows.append({
                 "Created At (IST)": formatted_time,
                 "Instrument": order.get('instrument', ''),
@@ -104,6 +95,12 @@ def analyze_bot_performance(api_json_response, export_filename="coinswitch_trade
                 "Filled Quote (INR)": filled_inr,
                 "Cancelled Qty": float(order.get('cancelledQuantity', 0))
             })
+            
+        # ✅ THE MAGIC STOPPER: 
+        # If we just processed the very first order of the session, STOP the loop!
+        if start_order_id and current_id == start_order_id:
+            print(f"🛑 Reached starting order {start_order_id}. Ignoring older trades.")
+            break 
             
     # Calculate VWAP (True Average Price)
     avg_price = total_inr_spent / total_usdt_bought if total_usdt_bought > 0 else 0
@@ -146,7 +143,7 @@ def login_view(request):
 
         # 🔥 Replace this with psycopg2 query
         if username == "admin" and password == "1234":
-            request.session['user'] = username  
+            request.session['user'] = username   # ✅ create session
             return redirect('dashboard')
         else:
             return render(request, "login.html", {"error": "Invalid credentials"})
@@ -159,6 +156,7 @@ def auto_trade_page(request):
 bot_running = False
 bot_message = ""
 current_order_id = None
+calculated_order_id = None
 trade_quantity = ""
 balance = 0
 filled_quantity = 0
@@ -255,7 +253,8 @@ def replace_order(cancel_body,body):
     try:
         print('calculating quantity',float(body['quantity']) - filled_quantity)
         quant=float(body['quantity']) - filled_quantity 
-        actual_affordable_quant = quant if balance >= quant else balance
+        actual_affordable_quant = quant if quant >= 1000 else balance
+        print('acsdfjsjfsjffsdsf',actual_affordable_quant)
         coinswitch.cancel_order({'orderId': current_order_id}).json()
         if 1000 > quant and balance > float(trade_quantity):
           print('getting total quantity from trade_quntity ',trade_quantity)
@@ -281,7 +280,7 @@ def replace_order(cancel_body,body):
         return ""
 
 def auto_trade_bot(price_range, min_qty, body):
-    global bot_running, bot_message,current_order_id,trade_quantity,balance,filled_quantity
+    global bot_running, bot_message,current_order_id,trade_quantity,balance,filled_quantity,calculated_order_id
     order_print  = "initial"
     current_placed_price = None
     side = body['side'].lower()  # 'buy' or 'sell'
@@ -293,6 +292,7 @@ def auto_trade_bot(price_range, min_qty, body):
     while bot_running:
         loop_start_time = datetime.now()
         try:
+            # We skip printing orderbook fetch every 3 seconds to avoid terminal spam, but we track status.
             res = session.get("https://exchange.coinswitch.co/api/v2/public/depth/?instrument=usdt/inr")
             
             if res.status_code != 200:
@@ -302,15 +302,17 @@ def auto_trade_bot(price_range, min_qty, body):
             data = res.json()
             levels = data["data"][side]
 
+            # 1. Find the top COMPETITOR price (ignoring our own order)
             competitor_price = None
             for level in levels:
                 price = float(level[0])
                 qty = float(level[1])
 
-
+                # CRITICAL: Do not compete with our own active order
                 if current_placed_price is not None and price == current_placed_price:
                     continue
 
+                # Ensure competitor has enough volume to matter
                 if qty >= min_qty:
                     competitor_price = price
                     break 
@@ -329,9 +331,11 @@ def auto_trade_bot(price_range, min_qty, body):
             if target_price == "price range reached":
                 time.sleep(5)
                 continue
+            # 2. Determine our target price (+0.01 for buy, -0.01 for sell)
 
             print(f"Competitor: {competitor_price} | Our Target: {target_price} | Currently Placed at: {current_placed_price}")
 
+            # 3. State Machine: Place, Hold, or Cancel/Replace
             if current_order_id is None:
                 # PLACE NEW ORDER
                 body['limitPrice'] = str(target_price)
@@ -342,6 +346,7 @@ def auto_trade_bot(price_range, min_qty, body):
                 response = coinswitch.buy_limit_order(body) if side == 'buy' else coinswitch.sell_limit_order(body)
                 resp_data = response.json()
                 
+                # Check for success (Adjust the condition based on CoinSwitch API's exact success response)
                 if balance == 0:
                     def fetch_balance(body):
                         global balance
@@ -353,6 +358,8 @@ def auto_trade_bot(price_range, min_qty, body):
                 if response.status_code == 200:
                     current_order_id = resp_data['data']['orderId']    
                     current_placed_price = target_price
+                    if not calculated_order_id:
+                        calculated_order_id = current_order_id
                     bot_message = f"✅ Active {side.upper()} order at ₹{target_price}"
                     print(f"✅ Order Placed Successfully. ID: {current_order_id} at ₹{target_price}")
                     loop_end_time = datetime.now()
@@ -402,7 +409,7 @@ def auto_trade_bot(price_range, min_qty, body):
                         return
                 
 
-
+                # CHECK IF WE ARE STILL AT THE TOP
             if current_placed_price != target_price:
                 bot_message = f"Market moved. Re-adjusting order to ₹{target_price}..."
                 print(f"📉 Market moved! We are at {current_placed_price}, new target is {target_price}. Replacing order...")
@@ -468,12 +475,14 @@ def dashboard(request):
     if request.method == "POST":
         api_action = request.POST.get('api')
         
-
+        # Clean standard django/frontend keys from the payload
         body = {k: v for k, v in request.POST.items() if k not in ('api', 'csrfmiddlewaretoken')}
         
         try:
+            # Dynamically call the matching function in coinswitch.py
             api_function = getattr(coinswitch, api_action)
             
+            # Execute the function with the cleaned body payload
             response = api_function(body)
             try:
                 data = response.json()

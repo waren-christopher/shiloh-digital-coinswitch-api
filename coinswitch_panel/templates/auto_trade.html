@@ -5,6 +5,31 @@
   {% load static %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <style>
     /* Specific overrides for auto trade */
+
+    .header {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .back-btn {
+        position: absolute;
+        left: 124px;
+        color: #94a3b8;
+        text-decoration: none;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .back-btn:hover {
+        color: #ffffff;
+        transform: translateX(-3px); /* Small slide animation on hover */
+    }
+
     #statusDisplay { 
         padding: 16px; 
         margin: 25px auto 0; 
@@ -48,6 +73,9 @@
 </head>
 <body>
 <div class="container">
+  <a href="/" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
   <div class="header">
       <h1 class="cyber-logo">⚡ Auto Trade</h1>
   </div>
@@ -66,7 +94,7 @@
       <div class="form-group"><span class="input-label">SIDE *</span><input name="side" id="side" value="BUY" readonly></div>
       <div class="form-group"><span class="input-label">INSTRUMENT *</span><input name="instrument" value="USDT/INR" readonly></div>
       <div class="form-group"><span class="input-label">QUANTITY TYPE *</span><input name="quantityType " value="QUOTE" readonly></div>
-      <div class="form-group"><span class="input-label">USERNAME *</span><input name="username" value="warenx" readonly></div>
+      <div class="form-group"><span class="input-label">USERNAME *</span><input name="username" value="shilohdigital_otc" readonly></div>
     </div>
     
     <div class="action-container">
