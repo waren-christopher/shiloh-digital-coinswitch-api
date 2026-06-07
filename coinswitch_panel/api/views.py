@@ -439,8 +439,8 @@ def auto_trade_bot(price_range, min_qty, body):
                     print(f"✅ Replaced order successfully. New ID: {current_order_id}")
                 except Exception as e:
                     print(f"💥 CRASH AT BOTTOM OF REPLACE: {str(e)}")
-                    bot_message =f"System error during replace step: {str(e)}"
                     bot_running = False
+                    bot_message =f"System error during replace step: {str(e)}"             
                     return
             else:
                 print(f"✅ We are at the top of the book. Holding position at {current_placed_price}")
@@ -466,8 +466,8 @@ def auto_trade_bot(price_range, min_qty, body):
 #enddddddddddddddddddddddd
 
 def dashboard(request):
-    if not request.session.get('user'):
-        return redirect('login')
+    # if not request.session.get('user'):
+    #     return redirect('login')
         
     if request.method == "GET":
         return render(request, "dashboard.html")
