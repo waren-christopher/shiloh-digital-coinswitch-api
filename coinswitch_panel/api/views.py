@@ -391,9 +391,14 @@ def auto_trade_bot(price_range, min_qty, body):
                             raw_quantity= float(float(trade_quantity) if balance > float(trade_quantity) else str(balance))
                             body['quantity'] = str(round(raw_quantity, 2))
                             latest_order_id = coinswitch.buy_limit_order(body).json() if side == 'buy' else coinswitch.sell_limit_order(body).json()
-                            print('order fullfilled so placed a new order')
-                        
-                            current_order_id = latest_order_id['data']['orderId'] 
+                            
+                            try:
+                              current_order_id = latest_order_id['data']['orderId'] 
+                              print('order fullfilled so placed a new order')
+                            except Exception as e:
+                                print("error while placing the order will retry again",str(e))
+                                current_order_id = None
+                                continue
                             current_placed_price = body['limitPrice']
                             bot_message = "order fullfilled so placed a new order..."
                             loop_end_time = datetime.now()
@@ -431,9 +436,12 @@ def auto_trade_bot(price_range, min_qty, body):
                     print(f"Sending API request to place new order at {target_price}...")
                     bot_message = f"Placing replacement order at ₹{target_price}..."
                     latest_order_id = coinswitch.buy_limit_order(body).json() if side == 'buy' else coinswitch.sell_limit_order(body).json()
-                    # print('order info',latest_order_id)
-
-                    current_order_id = latest_order_id['data']['orderId'] 
+                    try:
+                      current_order_id = latest_order_id['data']['orderId'] 
+                    except Exception as e:
+                        print("error while placing the order will retry again",str(e))
+                        current_order_id = None
+                        continue
                     current_placed_price = target_price
                     bot_message = f"✅ Position re-adjusted to ₹{target_price}"
                     print(f"✅ Replaced order successfully. New ID: {current_order_id}")
