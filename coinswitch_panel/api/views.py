@@ -396,7 +396,7 @@ def auto_trade_bot(price_range, min_qty, body):
                               current_order_id = latest_order_id['data']['orderId'] 
                               print('order fullfilled so placed a new order')
                             except Exception as e:
-                                print("error while placing the order will retry again",str(e))
+                                print("error while placing the order will retry again",current_order_id)
                                 current_order_id = None
                                 continue
                             current_placed_price = body['limitPrice']
@@ -439,7 +439,7 @@ def auto_trade_bot(price_range, min_qty, body):
                     try:
                       current_order_id = latest_order_id['data']['orderId'] 
                     except Exception as e:
-                        print("error while placing the order will retry again",str(e))
+                        print("error while placing the order will retry again",current_order_id)
                         current_order_id = None
                         continue
                     current_placed_price = target_price
