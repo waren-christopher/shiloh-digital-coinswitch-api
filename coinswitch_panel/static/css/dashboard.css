@@ -473,3 +473,9 @@ select.account-dropdown {
     background-color: #0f172a; 
     color: #ffffff;
 }
+
+/* Calendar Icon Invert for dark theme */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}

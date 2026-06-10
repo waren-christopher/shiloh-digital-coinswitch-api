@@ -46,7 +46,42 @@ def finish_auto_trade_and_report():
     except Exception as e:
         print(f"Error generating or sending performance report: {str(e)}")
 
-def analyze_bot_performance(api_json_response, start_order_id=None, export_filename="coinswitch_trade_history.csv"):
+def average_trade_price_api(body):
+    try:
+        start_date_str = body.get('start_date')
+        end_date_str = body.get('end_date')
+        ist_tz = timezone(timedelta(hours=5, minutes=30))
+        
+        start_time = None
+        end_time = None
+        
+        if start_date_str:
+            dt = datetime.fromisoformat(start_date_str)
+            start_time = dt.replace(tzinfo=ist_tz).timestamp()
+            
+        if end_date_str:
+            dt = datetime.fromisoformat(end_date_str)
+            end_time = dt.replace(tzinfo=ist_tz).timestamp()
+        else:
+            end_time = datetime.now().timestamp()
+            
+        resp = coinswitch.recent_orders({})
+        api_json_response = resp.json()
+        export_file = "coinswitch_custom_date_report.csv"
+        
+        stats = analyze_bot_performance(
+            api_json_response, 
+            start_time=start_time, 
+            end_time=end_time, 
+            export_filename=None
+        )
+        
+        return JsonResponse({"data": stats, "status": 200})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def analyze_bot_performance(api_json_response, start_order_id=None, start_time=None, end_time=None, export_filename=None):
     orders = []
     response_data = api_json_response.get('data', [])
     if isinstance(response_data, list):
@@ -65,6 +100,17 @@ def analyze_bot_performance(api_json_response, start_order_id=None, export_filen
         current_id = order.get('orderId')
         status = order.get('status', '').upper()
         
+        try:
+            ts_raw = int(order.get('createdAt', 0))
+            ts_sec = ts_raw / 1000 if ts_raw > 1e11 else ts_raw
+        except (ValueError, TypeError):
+            ts_sec = 0
+            
+        if start_time and ts_sec < start_time:
+            continue
+        if end_time and ts_sec > end_time:
+            continue
+
         if status == 'CANCELLED':
             cancelled_trades += 1
             
@@ -79,7 +125,8 @@ def analyze_bot_performance(api_json_response, start_order_id=None, export_filen
                 
             try:
                 ts = int(order.get('createdAt', 0))
-                dt_ist = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(ist_tz)
+                ts_sec_dt = ts / 1000 if ts > 1e11 else ts
+                dt_ist = datetime.fromtimestamp(ts_sec_dt, tz=timezone.utc).astimezone(ist_tz)
                 formatted_time = dt_ist.strftime('%Y-%m-%d %I:%M:%S %p')
             except (ValueError, TypeError):
                 formatted_time = "Unknown"
@@ -105,25 +152,25 @@ def analyze_bot_performance(api_json_response, start_order_id=None, export_filen
     # Calculate VWAP (True Average Price)
     avg_price = total_inr_spent / total_usdt_bought if total_usdt_bought > 0 else 0
     
-    # --- 5. CREATE AND SAVE THE EXCEL FILE ---
-    if excel_rows:
-        try:
-            if export_filename.endswith('.xlsx'):
-                export_filename = export_filename.replace('.xlsx', '.csv')
+    if export_filename is not None:
+        if excel_rows:
+            try:
+                if export_filename.endswith('.xlsx'):
+                    export_filename = export_filename.replace('.xlsx', '.csv')
             
-            keys = excel_rows[0].keys()
-            with open(export_filename, 'w', newline='', encoding='utf-8') as output_file:
-                dict_writer = csv.DictWriter(output_file, fieldnames=keys)
-                dict_writer.writeheader()
-                dict_writer.writerows(excel_rows)
-            print(f"📊 CSV file saved successfully as: {export_filename}")
-        except Exception as e:
-            print(f"⚠️ Failed to export file: {e}")
-    else:
-        # If no matching orders were found, ensure the file is clean or empty
-        if os.path.exists(export_filename):
-            os.remove(export_filename)
-        print("⚠️ No FULFILLED or PARTIALLY_CANCELLED orders found to export.")
+                keys = excel_rows[0].keys()
+                with open(export_filename, 'w', newline='', encoding='utf-8') as output_file:
+                    dict_writer = csv.DictWriter(output_file, fieldnames=keys)
+                    dict_writer.writeheader()
+                    dict_writer.writerows(excel_rows)
+                print(f"📊 CSV file saved successfully as: {export_filename}")
+            except Exception as e:
+                print(f"⚠️ Failed to export file: {e}")
+        else:
+            # If no matching orders were found, ensure the file is clean or empty
+            if os.path.exists(export_filename):
+                os.remove(export_filename)
+            print("⚠️ No FULFILLED or PARTIALLY_CANCELLED orders found to export.")
 
     # Return the summary exactly as before
     return {
@@ -487,6 +534,9 @@ def dashboard(request):
         body = {k: v for k, v in request.POST.items() if k not in ('api', 'csrfmiddlewaretoken')}
         
         try:
+            if api_action == 'average_trade_price':
+                return average_trade_price_api(body)
+                
             # Dynamically call the matching function in coinswitch.py
             api_function = getattr(coinswitch, api_action)
             
