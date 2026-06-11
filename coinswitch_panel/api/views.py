@@ -34,7 +34,7 @@ def finish_auto_trade_and_report():
             subject="CoinSwitch Auto Trade Bot Performance [Summary]",
             body=html_message,
             from_email=settings.EMAIL_HOST_USER,
-            to=["michaelsureshm12@gmail.com"]
+            to=["warenchrist00@gmail.com"]
         )
         email.content_subtype = "html"  # Crucial for HTML rendering
         
@@ -67,15 +67,15 @@ def average_trade_price_api(body):
             
         resp = coinswitch.recent_orders({})
         api_json_response = resp.json()
-        export_file = "coinswitch_custom_date_report.csv"
+        export_file = None
         
         stats = analyze_bot_performance(
             api_json_response, 
             start_time=start_time, 
             end_time=end_time, 
-            export_filename=None
+            export_filename=export_file
         )
-        
+
         return JsonResponse({"data": stats, "status": 200})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -152,12 +152,13 @@ def analyze_bot_performance(api_json_response, start_order_id=None, start_time=N
     # Calculate VWAP (True Average Price)
     avg_price = total_inr_spent / total_usdt_bought if total_usdt_bought > 0 else 0
     
+    # --- 5. CREATE AND SAVE THE EXCEL FILE ---
     if export_filename is not None:
         if excel_rows:
             try:
                 if export_filename.endswith('.xlsx'):
                     export_filename = export_filename.replace('.xlsx', '.csv')
-            
+                
                 keys = excel_rows[0].keys()
                 with open(export_filename, 'w', newline='', encoding='utf-8') as output_file:
                     dict_writer = csv.DictWriter(output_file, fieldnames=keys)
@@ -326,6 +327,19 @@ def replace_order(cancel_body,body):
         print(f"error : {str(e)}")
         return ""
 
+def check_balance(body):
+    global trade_quantity,bot_running,bot_message
+    res = coinswitch.broker_balance(body).json()
+    balance=float(res['data']['Available']['inr'])
+    print('balance is ',balance)
+    quan= trade_quantity if balance > float(body['quantity']) else balance
+    if 500 > quan:
+        bot_running = False
+        bot_message ="Auto Trade completed"
+        time.sleep(5)
+        return ""
+    return str(round(quan,2))
+
 def auto_trade_bot(price_range, min_qty, body):
     global bot_running, bot_message,current_order_id,trade_quantity,balance,filled_quantity,calculated_order_id
     order_print  = "initial"
@@ -438,14 +452,17 @@ def auto_trade_bot(price_range, min_qty, body):
                             raw_quantity= float(float(trade_quantity) if balance > float(trade_quantity) else str(balance))
                             body['quantity'] = str(round(raw_quantity, 2))
                             latest_order_id = coinswitch.buy_limit_order(body).json() if side == 'buy' else coinswitch.sell_limit_order(body).json()
-                            
+                        
                             try:
-                              current_order_id = latest_order_id['data']['orderId'] 
-                              print('order fullfilled so placed a new order')
+                                current_order_id = latest_order_id['data']['orderId'] 
+                                print('order fullfilled so placed a new order')
                             except Exception as e:
-                                print("error while placing the order will retry again",current_order_id)
-                                current_order_id = None
-                                continue
+                               print("error while placing the order will retry again","order details",latest_order_id,"current order id",current_order_id)
+                               body['quantity']= check_balance(body)
+                               if not body['quantity']:
+                                   break
+                               current_order_id = None
+                               continue
                             current_placed_price = body['limitPrice']
                             bot_message = "order fullfilled so placed a new order..."
                             loop_end_time = datetime.now()
@@ -483,14 +500,14 @@ def auto_trade_bot(price_range, min_qty, body):
                     print(f"Sending API request to place new order at {target_price}...")
                     bot_message = f"Placing replacement order at ₹{target_price}..."
                     latest_order_id = coinswitch.buy_limit_order(body).json() if side == 'buy' else coinswitch.sell_limit_order(body).json()
+                    # print('order info',latest_order_id)
                     try:
-                        if latest_order_id.status_code != 200:
-                        # order_det=coinswitch.particular_order_details(current_order_id).json()
-                        # filled_quantity=float(order_det['data']['filledQuoteQuantity'])
-                           continue
-                        current_order_id = latest_order_id['data']['orderId'] 
+                      current_order_id = latest_order_id['data']['orderId'] 
                     except Exception as e:
                         print("error while placing the order will retry again",current_order_id)
+                        body['quantity']= check_balance(body)
+                        if not body['quantity']:
+                            break
                         current_order_id = None
                         continue
                     current_placed_price = target_price
@@ -498,8 +515,8 @@ def auto_trade_bot(price_range, min_qty, body):
                     print(f"✅ Replaced order successfully. New ID: {current_order_id}")
                 except Exception as e:
                     print(f"💥 CRASH AT BOTTOM OF REPLACE: {str(e)}")
+                    bot_message =f"System error during replace step: {str(e)}"
                     bot_running = False
-                    bot_message =f"System error during replace step: {str(e)}"             
                     return
             else:
                 print(f"✅ We are at the top of the book. Holding position at {current_placed_price}")
