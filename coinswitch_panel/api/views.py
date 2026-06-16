@@ -333,7 +333,7 @@ def check_balance(body):
     balance=float(res['data']['Available']['inr'])
     print('balance is ',balance)
     quan= trade_quantity if balance > float(body['quantity']) else balance
-    if 500 > quan:
+    if 500 > float(quan):
         bot_running = False
         bot_message ="Auto Trade completed"
         time.sleep(5)
