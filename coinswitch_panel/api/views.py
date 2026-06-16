@@ -338,7 +338,7 @@ def check_balance(body):
         bot_message ="Auto Trade completed"
         time.sleep(5)
         return ""
-    return str(round(quan,2))
+    return str(round(float(quan),2))
 
 def auto_trade_bot(price_range, min_qty, body):
     global bot_running, bot_message,current_order_id,trade_quantity,balance,filled_quantity,calculated_order_id
