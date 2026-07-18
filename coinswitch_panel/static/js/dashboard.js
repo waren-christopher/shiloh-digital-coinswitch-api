@@ -264,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </span>
 
                     <select id="accountSelect" class="account-dropdown">
-                        <option value="136628600000041">Shiloh Yes bank</option>
+                        <option value="69884717484">Shloh idfc bank</option>
                         <option value="120039711894">Shloh canara bank</option>
                     </select>
 
