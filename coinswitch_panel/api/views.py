@@ -299,10 +299,8 @@ def buy_sell_decision(side,competitor_price,limit_threshold,order_id):
 def replace_order(cancel_body,body):
     global bot_running, bot_message,current_order_id,trade_quantity,balance,filled_quantity
     try:
-        print('calculating quantity',float(body['quantity']) - filled_quantity)
         quant=float(body['quantity']) - filled_quantity 
         actual_affordable_quant = quant if quant >= 1000 else balance
-        print('acsdfjsjfsjffsdsf',actual_affordable_quant)
         coinswitch.cancel_order({'orderId': current_order_id}).json()
         if 1000 > quant and balance > float(trade_quantity):
           print('getting total quantity from trade_quntity ',trade_quantity)
@@ -332,14 +330,15 @@ def check_balance(body):
     time.sleep(2)
     res = coinswitch.broker_balance(body).json()
     balance=float(res['data']['Available']['inr'])
-    print('balance is ',balance)
     quan= trade_quantity if balance > float(body['quantity']) else balance
+    trade_quantity = str(round(float(quan),2))
+    print('balance is ',balance,'and quantity is',quan,'adn trade quantiy is',trade_quantity)
     if 500 > float(quan):
         bot_running = False
         bot_message ="Auto Trade completed"
         time.sleep(5)
         return ""
-    return str(round(float(quan),2))
+    return trade_quantity
 
 def auto_trade_bot(price_range, min_qty, body):
     global bot_running, bot_message,current_order_id,trade_quantity,balance,filled_quantity,calculated_order_id
@@ -402,6 +401,7 @@ def auto_trade_bot(price_range, min_qty, body):
                 # PLACE NEW ORDER
                 body['limitPrice'] = str(target_price)
                 trade_quantity = body['quantity']
+                print(f'body quantity is {body['quantity']} and trade quantity is {trade_quantity}')
                 bot_message = f"Placing {order_print} {side} order at ₹{target_price}..."
                 print(f"⏳ Placing {order_print} {side} order at ₹{target_price} for {trade_quantity}...")
                 
@@ -462,6 +462,7 @@ def auto_trade_bot(price_range, min_qty, body):
                                print("error while placing the new order","order details",latest_order_id,"current order id",current_order_id)
                                print('checking balance........')
                                body['quantity']= check_balance(body)
+                               print('calculated final amount',body['quantity'])
                                if not body['quantity']:
                                    break
                                current_order_id = None
@@ -510,6 +511,7 @@ def auto_trade_bot(price_range, min_qty, body):
                         print("error while placing the new order will retry again",current_order_id,"current order id",latest_order_id)
                         print('checking balance........')
                         body['quantity']= check_balance(body)
+                        print('after check balance',body['quantity'])
                         if not body['quantity']:
                             break
                         current_order_id = None
