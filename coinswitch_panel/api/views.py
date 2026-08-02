@@ -329,6 +329,7 @@ def replace_order(cancel_body,body):
 
 def check_balance(body):
     global trade_quantity,bot_running,bot_message
+    time.sleep(2)
     res = coinswitch.broker_balance(body).json()
     balance=float(res['data']['Available']['inr'])
     print('balance is ',balance)
@@ -440,9 +441,10 @@ def auto_trade_bot(price_range, min_qty, body):
                         order_det=coinswitch.particular_order_details(current_order_id).json()
                         filled_quantity=float(order_det['data']['filledQuoteQuantity'])
                         if order_det['data']['status'] == 'FULFILLED': # or 100 > float(body['quantity']) - float(order_det['data']['filledQuoteQuantity']):
-                            if 300 > balance:
-                                fetch_balance(body)
-                                if 1000 > balance:
+                            if 500 > balance:
+                                res = coinswitch.broker_balance(body).json()
+                                balance=float(res['data']['Available']['inr'])
+                                if 500 > balance:
                                    bot_running = False
                                    bot_message = "Auto Trade successfully completed" 
                                    return
@@ -457,7 +459,7 @@ def auto_trade_bot(price_range, min_qty, body):
                                 current_order_id = latest_order_id['data']['orderId'] 
                                 print('order fullfilled so placed a new order')
                             except Exception as e:
-                               print("error while placing the order will retry again","order details",latest_order_id,"current order id",current_order_id)
+                               print("error while placing the new order","order details",latest_order_id,"current order id",current_order_id)
                                print('checking balance........')
                                body['quantity']= check_balance(body)
                                if not body['quantity']:
@@ -505,7 +507,7 @@ def auto_trade_bot(price_range, min_qty, body):
                     try:
                       current_order_id = latest_order_id['data']['orderId'] 
                     except Exception as e:
-                        print("error while placing the order will retry again",current_order_id,"current order id",latest_order_id)
+                        print("error while placing the new order will retry again",current_order_id,"current order id",latest_order_id)
                         print('checking balance........')
                         body['quantity']= check_balance(body)
                         if not body['quantity']:
