@@ -330,15 +330,16 @@ def check_balance(body):
     time.sleep(2)
     res = coinswitch.broker_balance(body).json()
     balance=float(res['data']['Available']['inr'])
-    quan= trade_quantity if balance > float(body['quantity']) else balance
-    trade_quantity = str(round(float(quan),2))
+    print(f'body quanti is {body['quantity']}')
+    quan= body['quantity'] if balance > float(body['quantity']) else balance
+   # trade_quantity = str(round(float(quan),2))
     print('balance is ',balance,'and quantity is',quan,'adn trade quantiy is',trade_quantity)
     if 500 > float(quan):
         bot_running = False
         bot_message ="Auto Trade completed"
         time.sleep(5)
         return ""
-    return trade_quantity
+    return quan
 
 def auto_trade_bot(price_range, min_qty, body):
     global bot_running, bot_message,current_order_id,trade_quantity,balance,filled_quantity,calculated_order_id
