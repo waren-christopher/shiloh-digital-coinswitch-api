@@ -71,7 +71,7 @@ def buy_market_order(body):
 
 def buy_limit_order(body):
     body=body.copy()
-    body['quantity']=str(round(quantity, 2))
+    body['quantity'] = str(body['quantity'])
     fee=float(round(float(body['quantity']) * 0.0015, 2)) if '.' in body['quantity'] else int(int(body['quantity']) * 0.0015)
     quantity=float(body['quantity']) - fee if '.' in body['quantity'] else int(body['quantity']) - fee
     body['quantity']=str(round(quantity, 2))
@@ -81,14 +81,13 @@ def buy_limit_order(body):
 
 def sell_limit_order(body):
     body=body.copy()
-    body['quantity']=str(round(quantity, 2))
+    body['quantity'] = str(body['quantity'])
     fee = float(round(float(body['quantity']) * 0.0015, 2)) if '.' in body['quantity'] else int(int(body['quantity']) * 0.0015)
     quantity = float(body['quantity']) - fee if '.' in body['quantity'] else int(body['quantity']) - fee
     body['quantity']=str(round(quantity, 2))
     url_path = "/api/v1/orders/"
     headers = _generate_headers("POST", url_path, body, "publickey", "secretkey")
     return session.post(f"{BASE_URL}{url_path}", json=body, headers=headers)
-
 def transfer_master_to_broker(body):
     body['fromID'] = os.getenv('masterid')
     body['toID'] = os.getenv('brokerid')
