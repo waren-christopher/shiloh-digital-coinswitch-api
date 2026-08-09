@@ -71,6 +71,7 @@ def buy_market_order(body):
 
 def buy_limit_order(body):
     body=body.copy()
+    body['quantity']=str(round(quantity, 2))
     fee=float(round(float(body['quantity']) * 0.0015, 2)) if '.' in body['quantity'] else int(int(body['quantity']) * 0.0015)
     quantity=float(body['quantity']) - fee if '.' in body['quantity'] else int(body['quantity']) - fee
     body['quantity']=str(round(quantity, 2))
@@ -80,6 +81,7 @@ def buy_limit_order(body):
 
 def sell_limit_order(body):
     body=body.copy()
+    body['quantity']=str(round(quantity, 2))
     fee = float(round(float(body['quantity']) * 0.0015, 2)) if '.' in body['quantity'] else int(int(body['quantity']) * 0.0015)
     quantity = float(body['quantity']) - fee if '.' in body['quantity'] else int(body['quantity']) - fee
     body['quantity']=str(round(quantity, 2))

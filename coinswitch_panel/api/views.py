@@ -339,7 +339,7 @@ def check_balance(body):
         bot_message ="Auto Trade completed"
         time.sleep(5)
         return ""
-    return quan
+    return str(round(float(quan),2))
 
 def auto_trade_bot(price_range, min_qty, body):
     global bot_running, bot_message,current_order_id,trade_quantity,balance,filled_quantity,calculated_order_id
@@ -535,9 +535,12 @@ def auto_trade_bot(price_range, min_qty, body):
             time.sleep(5)
 
         except Exception as e:
-            print(f"⚠️ An unexpected error occurred in loop: {e}")
+            print(f"⚠️ An unexpected error occurred in loop: {str(e)}")
             bot_message = f"Temporarily disrupted: {str(e)}"
-            time.sleep(5)
+            print(body)
+            bot_running=False
+            time.sleep(5);break
+           # time.sleep(5)
             
         # print('sleeping')
         loop_end_time = datetime.now()
